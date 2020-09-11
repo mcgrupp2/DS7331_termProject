@@ -168,3 +168,11 @@ f, ax = plt.subplots(figsize = (9,9))
 
 sns.violinplot(x= 'stock_dividends', y = 'age', hue = 'income_50k', data = df,
                split = True, inner = 'quart')
+
+sns.set(style = "white")
+
+#Create a plot a grid
+g = sns.PairGrid(df, [['age','stock_dividends', 'weeks_worked']], diag_sharey = False)
+g.map_lower(sns.kdeplot, cmap = "Blues_d")
+g.map_upper(plt.scatter)
+g.map_diag(sns.kdeplot, lw = 3)
