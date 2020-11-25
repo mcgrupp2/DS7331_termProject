@@ -1,0 +1,271 @@
+---
+title: 'Lab3: Association Rules'
+author: "Aniketh V"
+date: "11/24/2020"
+output: html_document
+---
+
+## Lab 3: Lab 3: Association Rules
+Group 2 Team Members:
+- Name 1: Aniketh Vankina
+- Name 2: Indy Dhillon 
+- Name 3: Jason Rupp 
+- Name 4: Suchismita Moharana 
+
+
+## Business Understanding 1
+The dataset selected for this project was collected by the US Census Bureau and the Bureau of Labor Statistics over the course of 1994 and 1995 for the Current Population Survey (CPS). The main purpose of the CPS is to obtain current information on the status of the labor force in the United States. More specifically, this survey is conducted to enumerate the number of jobless and unemployed individuals as well as to get an idea about the social well-being of the citizens.
+
+The Current Population Survey was developed in the late 1930s after the Great Depression, as prior there was not an effective technique to classify the labor force. A great need arose for a reliable survey of the population after this period of widespread unemployment. Previously, there were several indirect surveying techniques employed, however there were great discrepancies between these methods. The first surveys began in the 1940s and responsibility for conducting the survey has changed hands in the government, but currently, the survey portion is conducted by the US Census Bureau and the data is analyzed by the Bureau of Labor Statistics. 
+
+The CPS is conducted monthly and is administered by asking a series of questions pertaining to socioeconomic factors of roughly 60,000 probability sampled households from all 50 states and the District of Columbia. Eligible candidates must be over the age of 15, not in the Armed Forces, or in an institution such as a prison, nursing home or long-term health care facility. Typically, labor force questions are asked pertaining to eligible workers in the household, in addition to supplemental questions asked that are of particular interest to labor force analysts. These subjects range greatly in the both the frequency in which they are asked, as in, annually, biannually, or one-time, as well the topics. Supplemental survey topics which vary monthly and cover questions relating to many differing topics, such as veterans status, child support, displaced workers, fertility, disability, school enrollment, just to name a few.
+
+This data was obtained from the University of California Irvine Machine Learning repository, which a citation and a direct link to the dataset can be found [here](https://www2.1010data.com/documentationcenter/prod/Tutorials/MachineLearningExamples/CensusIncomeDataSet.html). 
+
+Due to the wide-ranging nature of this survey, outcomes derived from this data would be highly dependent on the questions at hand. For purposes of this study, the main goals will be classification of two variables. The first variable will be the income as a binomial response, above or below $50,000 annually. The second classification variable will be created from the level of education feature, whether the person is a college graduate or not.
+
+This data was compiled as it is important for labor force analysts to produce a statistical summary on questions of interest pertaining the United States workforce. The survey is a very useful tool that will provides insight into the social and economic status of the US population. This project will not be necessarily using this data set for what it was initially intended for but rather produce two unique classification problems. If useful knowledge has been mined from this data, an accurate classification algorithm will be produced for the desired variables selected. Ten-fold cross validation will be used to assess if useful knowledge has been mined.
+
+For these studies, association rules will be created. Association rule mining is likelihood of co-occurence and there is no causality. The effectiveness of a good prediction apriori algorithm will be assessed by confidence of the outcome. This validation method of apriori algorithm will help graduate schools to target students who might be interested for higher studies. Since, we do not need any causality here, so association rule will work just fine. 
+
+With current pandemic, grad schools are facing dropping number of enrollment which is due to various reasons (i.e. contamination issue at campus, layoff and furloughs in many different comanies forcing working students to take break). Grad schools can target students who are more likely to pursue in higher studies by giving them scholarships and lure them to enroll.
+```{r}
+library(tidyverse)
+library(mlbench)
+library(arules)
+library(dplyr)
+library(stringr)
+library(magrittr)
+library(arulesViz)
+library(naniar)
+library(knitr)
+```
+
+
+```{r}
+data=read_csv("/Users/password1234/Documents/Machine Learning/DS7331_termProject/data/census-income.data.csv", col_names = c(
+    'age',
+    'class_worker',
+    'det_ind_code',
+    'det_occ_code',
+    'education',
+    'wage_per_hour',
+    'hs_college',
+    'marital_stat',
+    'major_ind_code',
+    'major_occ_code',
+    'race',
+    'hisp_origin',
+    'sex',
+    'union_member',
+    'unemp_reason',
+    'full_or_part_emp',
+    'capital_gains',
+    'capital_losses',
+    'stock_dividends',
+    'tax_filer_stat',
+    'region_prev_res',
+    'state_prev_res',
+    'det_hh_fam_stat',
+    'det_hh_summ',
+    'instance_weight', ## this field is not used as a feature
+    'mig_chg_msa',
+    'mig_chg_reg',
+    'mig_move_reg',
+    'mig_same',
+    'mig_prev_sunbelt',
+    'num_emp',
+    'fam_under_18',
+    'country_father',
+    'country_mother',
+    'country_self',
+    'citizenship',
+    'own_or_self',
+    'vet_question',
+    'vet_benefits',
+    'weeks_worked',
+    'year',
+    'income_50k'
+))
+```
+## Data Understanding 1
+
+A subset of features were selected from the larger census unemployment dataset with exception to 2 column. One of the features that was created was done with the `age` variable of the census data. The records were split into age groups, so that age could be categorically represented in the rules that were created. Another feature which was generated from the data set is a representation of education level. The feature was binomial and called `graduated`; if the person has attained a 4 year degree or higher, they're considered to have graduated and would have a value of true. Omission of some features from the larger dataset was done to simplify the rules, as well as remove any feature which may add unnecessary difficulty to interpretation. Below is a table of the features that were used to map association rules with regard to education and income. 
+
+| Feature   | Datatype | Summary|
+|:----------|:---------|:-------|
+| age_group | Categorical | Age group of record|
+| det_ind_code | Categorical | Value assigned to industry of employment |
+| det_occ_code | Categorical | Code associated with occupation |
+| major_occ_code | Categorical | Description of the role of the individual |
+| sex          | Categorical  | Gender of individual |
+| education    | Categorical  | Highest Level of education attained |
+| martial_stat | Categorical | Martial statues of individual;  married, single, or divorced|
+| race      | Categorical  | Race of the individual e.g. White, Asian, Hispanic, etc… |
+| tax_filer_stat | Categorical | current status for their tax filing |
+| citizenship | Categorical | United States citizen or other |
+| graduated | Categorical | Achieved higher education degree |
+| income_50k | Categorical | Annual income greater than $50,000 annually|
+
+
+```{r}
+## Create a new variable for classification based of if the person recieved a 
+## college degree
+higer_degrees = c(
+    'Bachelors degree(BA AB BS)', 
+    'Masters degree(MA MS MEng MEd MSW MBA)', 
+    'Prof school degree (MD DDS DVM LLB JD)',
+    'Doctorate degree(PhD EdD)'
+)
+
+data$graduated <- ifelse(data$education %in% higer_degrees, "yes", "no")
+```
+
+
+```{r}
+dim(data[duplicated(data),])
+```
+
+
+The above output shows that there are a number of duplicate records. It doesn't seem that they are true duplicates, just separate records with the same features categorically. Either way, the duplicates are removed to not bias any of the statistics surrounding the association rules. If there was a high duplicate rate for some of the records, it could skew to support parameters for the rules. To avoid this issue, they will simply be removed.
+
+```{r}
+# Removes dups, still have ~200,000 rows
+data <- data[!duplicated(data),]
+```
+
+
+```{r}
+data$age_group <- cut(data$age, breaks=c(-1,18,65,999), labels=c("<18","18-64","65+"))
+
+data$age_group = as.factor(data$age_group)
+data$det_ind_code = as.factor(data$det_ind_code)
+data$det_occ_code = as.factor(data$det_occ_code)
+data$major_occ_code = as.factor(data$major_occ_code)
+data$sex = as.factor(data$sex)
+data$education = as.factor(data$education)
+data$marital_stat = as.factor(data$marital_stat)
+data$race = as.factor(data$race)
+data$tax_filer_stat = as.factor(data$tax_filer_stat)
+data$citizenship = as.factor(data$citizenship)
+data$graduated = as.factor(data$graduated)
+data$income_50k = as.factor(data$income_50k)
+```
+
+
+```{r}
+data <- data[,c("age_group", 
+"det_ind_code", 
+"det_occ_code",
+"major_occ_code", 
+"sex", 
+"education", 
+"marital_stat", 
+"race",
+"tax_filer_stat", 
+"citizenship", 
+"graduated",
+"income_50k")]
+
+income_data = data %>% select(
+  age_group, 
+  det_ind_code, 
+  det_occ_code, 
+  major_occ_code, 
+  sex, 
+  education,
+  marital_stat, 
+  race, 
+  tax_filer_stat, 
+  citizenship, 
+  income_50k
+  )
+grad_data = data %>% select(
+  age_group, det_ind_code, det_occ_code, major_occ_code, sex,
+  marital_stat, race, tax_filer_stat, citizenship, graduated,income_50k
+)
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+#This is to address missing values
+gg_miss_var(data)
+```
+
+The above plot shows that there are not any missing values for this subset of data. This will be very helpful when it comes to developing a rule model.
+
+## Data Understanding 2
+```{r}
+
+
+
+```
+
+## Modeling and Evaluation 1
+```{r}
+######## ARules ########
+
+#isets = apriori(selection, parameter = list(target ="frequent", support = 0.5))
+
+rules_grad = apriori(grad_data, parameter = list(support = 0.03, confidence = 0.74), appearance = list(default="lhs",rhs="graduated=yes"))
+inspect(head(rules_grad, n = 10))
+quality(head(rules_grad)) #print the quality of the measures
+
+is_max_grad = rules_grad[is.maximal(rules_grad)]
+inspect(head(sort(is_max_grad, by = "lift")))
+length(is_max_grad)
+
+
+
+rules_income = apriori(
+  income_data, 
+  parameter = list(support = 0.015, confidence = 0.25), appearance = list(default="lhs",rhs="income_50k=50000+.")
+)
+inspect(head(rules_income, n = 10))
+quality(head(rules_income)) #print the quality of the measures
+
+is_max = rules_income[is.maximal(rules_income)]
+inspect((sort(is_max, by = "lift")))
+length(is_max)
+
+```
+
+## Modeling and Evaluation 2
+
+## Modeling and Evaluation 3
+```{r}
+######  Vizualization  #####
+plot(rules_grad)
+plot(rules_income)
+
+# a great plot
+plot(rules_grad, method="grouped")
+plot(rules_income, method="grouped")
+```
+
+## Modeling and Evaluation 4
+
+
+## Deployment
+
+The below companies and parties might want to use our model to predict the following:
+
+To predict income:
+- IRS
+- Marketing agencies
+- Real Estate
+
+To predict graduation:
+- Job agency
+- Political parties
+- Graduate school recruiting
+
+
+Graduate schools can use this model to target students who are more likely to do higher studies based on other attributes that are associated with higher education. 
+
+The model can be deployed in the cloud environment for high availability and scaling. The pipeline was designed so it can process the unseen data which than can be used in the model. This is so that anyone can easily utilize the model to process the unseen data. Other data that can be collected is real estate information (rent or own, type of home, price of home, etc…) and whether this individual will want to pursue a higher education. This type of model can be updated monthly based on additional data that is collected. However, updating more than a month is not necessary because these types of attributes are not prone to frequent change.
+
+## Exceptional Work
