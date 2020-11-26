@@ -1,17 +1,9 @@
 ---
 title: 'Lab3: Association Rules'
-author: "Aniketh V"
+author: "Aniketh V, Indy Dhillon, Suchismita Moharana, Jason Rupp"
 date: "11/24/2020"
 output: html_document
 ---
-
-## Lab 3: Lab 3: Association Rules
-Group 2 Team Members:
-- Name 1: Aniketh Vankina
-- Name 2: Indy Dhillon 
-- Name 3: Jason Rupp 
-- Name 4: Suchismita Moharana 
-
 
 ## Business Understanding 1
 The dataset selected for this project was collected by the US Census Bureau and the Bureau of Labor Statistics over the course of 1994 and 1995 for the Current Population Survey (CPS). The main purpose of the CPS is to obtain current information on the status of the labor force in the United States. More specifically, this survey is conducted to enumerate the number of jobless and unemployed individuals as well as to get an idea about the social well-being of the citizens.
@@ -29,7 +21,8 @@ This data was compiled as it is important for labor force analysts to produce a 
 For these studies, association rules will be created. Association rule mining is likelihood of co-occurence and there is no causality. The effectiveness of a good prediction apriori algorithm will be assessed by confidence of the outcome. This validation method of apriori algorithm will help graduate schools to target students who might be interested for higher studies. Since, we do not need any causality here, so association rule will work just fine. 
 
 With current pandemic, grad schools are facing dropping number of enrollment which is due to various reasons (i.e. contamination issue at campus, layoff and furloughs in many different comanies forcing working students to take break). Grad schools can target students who are more likely to pursue in higher studies by giving them scholarships and lure them to enroll.
-```{r}
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 library(tidyverse)
 library(mlbench)
 library(arules)
@@ -42,7 +35,7 @@ library(knitr)
 ```
 
 
-```{r}
+```{r include=FALSE}
 data=read_csv("/Users/password1234/Documents/Machine Learning/DS7331_termProject/data/census-income.data.csv", col_names = c(
     'age',
     'class_worker',
@@ -199,84 +192,176 @@ The above plot shows that there are not any missing values for this subset of da
 
 ## Data Understanding 2
 ```{r}
-
-
+#Age Group Graph
+data %>% ggplot(aes(x = age_group, y = ..count.., fill = graduated)) +geom_bar() +theme_minimal() +theme(axis.text.x = element_text(angle = 35, hjust = 1)) +labs(title = "Age Group Category Breakdown", x = "Age Group", y = "Count")
 
 ```
+
+
+```{r}
+#Tax filer status and Income graph
+data %>%ggplot(aes(x = tax_filer_stat, y = ..count.., fill = income_50k)) +geom_bar() +theme_minimal() +theme(axis.text.x = element_text(angle = 45, hjust = 1)) +labs(title = "Tax Filing Status Category Breakdown", x = "Tax Filer Status", y = "Count")
+
+#Occupation code graph
+data %>%ggplot(aes(x = major_occ_code, y = ..count.., fill = income_50k)) +geom_bar() +theme_minimal() +theme(axis.text.x = element_text(angle = 45, hjust = 1)) +labs(title = "Tax Filing Status Category Breakdown", x = "Tax Filer Status", y = "Count")
+```
+
+These graphs shown above compares different categories that helps us with our association rules mining task. The first graph is a simple bar chart that shows the income level per age group. This can be particularly useful for our mining later on. 
+
+The second graph is also a simple bar graph that compares tax filer attribute in response to income. This is useful to check the different categories within this attribute and how it compares to income.
+
+All the above graphs can be used to find potential items that will be for our rules. We would only expect the categories that would have high graduation/income above 50K to show up in our association rules output.
 
 ## Modeling and Evaluation 1
 ```{r}
 ######## ARules ########
+#Set 1
 
-#isets = apriori(selection, parameter = list(target ="frequent", support = 0.5))
-
-rules_grad = apriori(grad_data, parameter = list(support = 0.03, confidence = 0.74), appearance = list(default="lhs",rhs="graduated=yes"))
-inspect(head(rules_grad, n = 10))
-quality(head(rules_grad)) #print the quality of the measures
+#Grad Rules
+rules_grad = apriori(grad_data, parameter = list(support = 0.04, confidence = 0.74), appearance = list(default="lhs",rhs="graduated=yes"))
+#inspect(head(rules_grad, n = 10))
+#quality(head(rules_grad)) #print the quality of the measures
 
 is_max_grad = rules_grad[is.maximal(rules_grad)]
 inspect(head(sort(is_max_grad, by = "lift")))
 length(is_max_grad)
 
+#Income Rules
+rules_income = apriori(
+  income_data, 
+  parameter = list(support = 0.02, confidence = 0.20), appearance = list(default="lhs",rhs="income_50k=50000+.")
+)
+#inspect(head(rules_income, n = 10))
+#quality(head(rules_income)) #print the quality of the measures
 
+is_max_income = rules_income[is.maximal(rules_income)]
+inspect((sort(is_max_income, by = "lift")))
+length(is_max_income)
 
+```
+
+When it comes to association rules the evaluation is very subjective. Based on trial and error we picked different parameter values to obtain the optimal amount of rules. The below values for support and confidence only yielded 1 rules for each algorithm:
+
+- (support = 0.04, confidence = 0.74)
+- (support = 0.02, confidence = 0.20)
+
+We found the above values too aggressive for our search criteria and deduced that support values less than the above numbers gave us the best results.
+
+```{r}
+#Set 2
+
+#isets = apriori(selection, parameter = list(target ="frequent", support = 0.5))
+
+#Grad Rules
+rules_grad = apriori(grad_data, parameter = list(support = 0.03, confidence = 0.74), appearance = list(default="lhs",rhs="graduated=yes"))
+inspect(head(rules_grad, n = 10))
+quality(head(rules_grad)) #print the quality of the measures
+length(rules_grad)
+
+is_max_grad = rules_grad[is.maximal(rules_grad)]
+inspect(head(sort(is_max_grad, by = "lift")))
+length(is_max_grad)
+
+#Income Rules
 rules_income = apriori(
   income_data, 
   parameter = list(support = 0.015, confidence = 0.25), appearance = list(default="lhs",rhs="income_50k=50000+.")
 )
 inspect(head(rules_income, n = 10))
 quality(head(rules_income)) #print the quality of the measures
+length(rules_income)
 
-is_max = rules_income[is.maximal(rules_income)]
-inspect((sort(is_max, by = "lift")))
-length(is_max)
+is_max_income = rules_income[is.maximal(rules_income)]
+inspect((sort(is_max_income, by = "lift")))
+length(is_max_income)
 
 ```
+The below output contains values that we found were the most ideal. It generated 4 rules for the itemsets for graduation and 3 rules for the itemsets that contain income.
+
 
 ## Modeling and Evaluation 2
+Overview for Income Rules:
+The above analysis provides the frequent itemsets that are associated that we mined. From the overall picture shows us the itemsets that were picked based on the parameters we passed. To check the frequent itemsets that are commonly associated with income 50000+ we used support values of 1.5% and a confidence of 25%. This gave us a 3 rules. The lift values for these rules are a little lower than grad rules.
+
+Overview for Gradution Rules:
+On the other hand we also decided to check the association for the people that actually graduated. Our findings gives us favorable results. We were able to set those thresholds to a higher value to give us the optimal amount of rules. Out of the 4 rules the average for the confidence comes out to be 75% and support at an average of 4%. The lifts are also about the same, this tells us the the strength of the rules are viable to keep. The criteria that was used to land on this justification is the difference between the lift numbers of both graduation and income rules (the lift for graduation rules is slightly better than income.
+
+As shown in the above analysis both blocks showed very different results. The first code block held aggressive values for support and confidence which gave us only 1 rule. Compared to the the parameters we felts were the most optimum gave us best rules for our analysis.
 
 ## Modeling and Evaluation 3
 ```{r}
-######  Vizualization  #####
-plot(rules_grad)
-plot(rules_income)
-
-# a great plot
-plot(rules_grad, method="grouped")
-plot(rules_income, method="grouped")
+#Max Grad
+plot(is_max_grad)
 ```
+In the above scatter plot the support and confidence of the rules for income over $50k and graduated and displayed. For graduated we were able to find 3 rules with about 3% support and one rule with over 4% support, the confidences and lift were all comparable with confidence around 75%.
+
+```{r}
+#Max Income
+plot(is_max_income)
+```
+For income, the three maximal rules we found all had similar support around 1.5% but ranged in confidence from 25% to 30%.
+
+```{r}
+plot(is_max_grad, method="graph")
+```
+
+Next we can see the features that combined to form these rules. For graduated: professional specialty occupation codes, married with spouse present, white, tax filers joint under 65, age group of 18-65, and native born citizen are the combination of factors that coincided with graduation. Each of these contributed to at least 3 of the 4 rulesets generated.
+
+```{r}
+plot(is_max_income, method="graph")
+```
+For income the rule sets associated with income over $50k are males with a bachelor degree or white 18-65 year olds that work in professional specialty or were native born citizens in executive admin or management.
 
 ## Modeling and Evaluation 4
 Association Rules Ramifications
 
-Overview:
-The above analysis provides the frequent itemsets that are associated that we mined. From the overall picture shows us the itemsets that were picked based on the parameters we passed. To check the frequent itemsets that are commonly associated with income 50000+ we used support values of 1.5% and a confidence of 25%. This gave us a 11 rules 
+Since we are balancing both support and confidence, the best rules are subjective. That being said one of the few downsides that were touched upon in the above sections is that the support values where it gave us the best rules low. Anything above those numbers resulted in less rules or no rules. It would be beneficial if we were able to set higher support thresholds and get similar results. 
 
-Ramification:
-The downside for these rules is that our confidence is very low. This shows us that the selected items that leads to income 50K+ being selected often is only greater than 25% and caps off at 30%. The lifts from the rules is also pretty high compared to the rules for graduation.
+Additionally, the confidence for the income set of rules is very low. This is telling us that the percentage of time the right hand rules events occurs is low given the left hand rules. One thing about having a higher support is that it applies more broadly which could make it more useful. However, the higher the confidence the more we can trust the rule. Optimizing more for support and confidence depends on the use case. 
 
-Overview:
-On the other hand we also decided to check the association for the people that actually graduated. Our findings gives us favorable results. We were able to set those thresholds to a higher value to give us the optimal amount of rules. Out of the 24 rules the average for the confidence comes out to 75% and support at an average of 4%. The lifts are also about the same, this tells us the the strength of the rules are viable to keep. 
-
-Ramifaction:
 
 ## Deployment
 
 The below companies and parties might want to use our model to predict the following:
 
 To predict income:
-- IRS
-- Marketing agencies
-- Real Estate
+IRS, Marketing agencies, Real Estate
 
 To predict graduation:
-- Job agency
-- Political parties
-- Graduate school recruiting
-
+Job agency, Political parties, Graduate school recruiting
 
 Graduate schools can use this model to target students who are more likely to do higher studies based on other attributes that are associated with higher education. 
 
 The model can be deployed in the cloud environment for high availability and scaling. The pipeline was designed so it can process the unseen data which than can be used in the model. This is so that anyone can easily utilize the model to process the unseen data. Other data that can be collected is real estate information (rent or own, type of home, price of home, etc…) and whether this individual will want to pursue a higher education. This type of model can be updated monthly based on additional data that is collected. However, updating more than a month is not necessary because these types of attributes are not prone to frequent change.
 
 ## Exceptional Work
+
+Initially we only wanted to perform association rule mining on just income, but to compare we decided to also run a rule mining for the other class which is graduated. The values used for support and confidence are pasted again below to show for additional work.
+
+```{r}
+#Exceptional Work
+
+#Grad Rules
+rules_grad = apriori(grad_data, parameter = list(support = 0.03, confidence = 0.74), appearance = list(default="lhs",rhs="graduated=yes"))
+inspect(head(rules_grad, n = 10))
+quality(head(rules_grad)) #print the quality of the measures
+length(rules_grad)
+
+is_max_grad = rules_grad[is.maximal(rules_grad)]
+inspect(head(sort(is_max_grad, by = "lift")))
+length(is_max_grad)
+```
+
+## Sources
+UCI Citation for dataset:
+Dua, D. and Graff, C. (2019). UCI Machine Learning Repository [http://archive.ics.uci.edu/ml]. Irvine, CA: University of California, School of Information and Computer Science.
+
+[Direct Link to Census-Income Dataset](https://www2.1010data.com/documentationcenter/prod/Tutorials/MachineLearningExamples/CensusIncomeDataSet.html)
+
+[History of the Current Population Survey](https://www.census.gov/programs-surveys/cps/about/history-of-the-cps.html).
+
+[Methodology of the Current Population Survey](https://www.census.gov/programs-surveys/cps/technical-documentation/methodology.html)
+
+[Current Population Survey: Supplemental Survey Topics](https://www.census.gov/programs-surveys/cps/about/supplemental-surveys.html)
+
+[Link to Association Rule article for insights](https://towardsdatascience.com/association-rules-2-aa9a77241654)
