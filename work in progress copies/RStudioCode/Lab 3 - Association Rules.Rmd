@@ -247,7 +247,18 @@ plot(rules_income, method="grouped")
 ```
 
 ## Modeling and Evaluation 4
+Association Rules Ramifications
 
+Overview:
+The above analysis provides the frequent itemsets that are associated that we mined. From the overall picture shows us the itemsets that were picked based on the parameters we passed. To check the frequent itemsets that are commonly associated with income 50000+ we used support values of 1.5% and a confidence of 25%. This gave us a 11 rules 
+
+Ramification:
+The downside for these rules is that our confidence is very low. This shows us that the selected items that leads to income 50K+ being selected often is only greater than 25% and caps off at 30%. The lifts from the rules is also pretty high compared to the rules for graduation.
+
+Overview:
+On the other hand we also decided to check the association for the people that actually graduated. Our findings gives us favorable results. We were able to set those thresholds to a higher value to give us the optimal amount of rules. Out of the 24 rules the average for the confidence comes out to 75% and support at an average of 4%. The lifts are also about the same, this tells us the the strength of the rules are viable to keep. 
+
+Ramifaction:
 
 ## Deployment
 
